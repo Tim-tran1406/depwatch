@@ -8,7 +8,9 @@ from __future__ import annotations
 
 from depwatch.core.models import ScanResult
 from depwatch.report.summary import (
+    any_fix,
     dominant_driver,
+    fix_hint,
     high_risk_count,
     key_finding,
     select_risky,
@@ -50,18 +52,28 @@ def scan_to_markdown(result: ScanResult, *, limit: int = 10) -> str:
         lines.append(f"All **{total}** packages look low-risk. ✅")
         return "\n".join(lines) + "\n"
 
-    lines += [
-        "| # | Package | Version | Type | Risk | Key finding |",
-        "|--:|---------|---------|------|------|-------------|",
-    ]
+    show_fix = any_fix(risky)
+    if show_fix:
+        lines += [
+            "| # | Package | Version | Type | Risk | Key finding | Fix |",
+            "|--:|---------|---------|------|------|-------------|-----|",
+        ]
+    else:
+        lines += [
+            "| # | Package | Version | Type | Risk | Key finding |",
+            "|--:|---------|---------|------|------|-------------|",
+        ]
     for rank, package in enumerate(risky[:limit], start=1):
         label = _LABEL[classify(package.risk.overall)]
         kind = "direct" if package.signals.is_direct else "transitive"
         finding = key_finding(package).replace("|", "\\|")
-        lines.append(
+        row = (
             f"| {rank} | {package.signals.name} | {package.signals.version} | {kind} "
             f"| **{label}** {package.risk.overall:.2f} | {finding} |"
         )
+        if show_fix:
+            row += f" {fix_hint(package) or '—'} |"
+        lines.append(row)
     lines.append("")
     if len(risky) > limit:
         lines.append(f"_… and {len(risky) - limit} more risky package(s) not shown._")

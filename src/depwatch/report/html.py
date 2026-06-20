@@ -10,7 +10,9 @@ from html import escape
 
 from depwatch.core.models import ScanResult, ScoredPackage
 from depwatch.report.summary import (
+    any_fix,
     dominant_driver,
+    fix_hint,
     high_risk_count,
     key_finding,
     select_risky,
@@ -42,6 +44,7 @@ th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color
 .badge.high { background: #cf222e; }
 .badge.critical { background: #82071e; }
 .muted { color: #57606a; }
+.fix { color: #0969da; white-space: nowrap; }
 footer { margin-top: 1.5rem; color: #8b949e; font-size: 0.85rem; }
 """
 
@@ -87,23 +90,28 @@ def _body(result: ScanResult, limit: int) -> str:
 
 
 def _table(packages: list[ScoredPackage]) -> str:
-    rows = [
-        "<table>",
+    show_fix = any_fix(packages)
+    header = (
         "<tr><th>#</th><th>Package</th><th>Version</th><th>Type</th>"
-        "<th>Risk</th><th>Key finding</th></tr>",
-    ]
+        "<th>Risk</th><th>Key finding</th>"
+    )
+    header += "<th>Fix</th></tr>" if show_fix else "</tr>"
+    rows = ["<table>", header]
     for rank, package in enumerate(packages, start=1):
         band = classify(package.risk.overall)
         kind = "direct" if package.signals.is_direct else "transitive"
-        rows.append(
+        cells = (
             f"<tr><td>{rank}</td>"
             f"<td><strong>{escape(package.signals.name)}</strong></td>"
             f"<td>{escape(package.signals.version)}</td>"
             f"<td>{kind}</td>"
             f'<td><span class="badge {_BAND_CLASS[band]}">{band.value.upper()}</span> '
             f"{package.risk.overall:.2f}</td>"
-            f"<td>{escape(key_finding(package))}</td></tr>"
+            f"<td>{escape(key_finding(package))}</td>"
         )
+        if show_fix:
+            cells += f'<td class="fix">{escape(fix_hint(package) or "—")}</td>'
+        rows.append(cells + "</tr>")
     rows.append("</table>")
     return "\n".join(rows)
 

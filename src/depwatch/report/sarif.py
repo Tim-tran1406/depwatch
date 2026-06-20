@@ -17,7 +17,7 @@ from packaging.requirements import Requirement as PackagingRequirement
 from packaging.utils import canonicalize_name
 
 from depwatch.core.models import ScanResult, ScoredPackage
-from depwatch.report.summary import key_finding, select_risky
+from depwatch.report.summary import fix_hint, key_finding, select_risky
 from depwatch.scoring.bands import RiskBand, classify
 
 _INFORMATION_URI = "https://github.com/Tim-tran1406/depwatch"
@@ -78,13 +78,16 @@ def _result_for(package: ScoredPackage, uri: str, line_of: dict[str, int]) -> di
     band = classify(package.risk.overall)
     driver = max(package.risk.dimensions, key=lambda d: d.score)
     name, version_ = package.signals.name, package.signals.version
+    fix = fix_hint(package)
+    text = (
+        f"{name} {version_}: {key_finding(package)} (risk {package.risk.overall:.2f}, {band.value})"
+    )
+    if fix:
+        text += f" — fix: {fix}"
     return {
         "ruleId": f"depwatch/{driver.name}",
         "level": _LEVEL[band],
-        "message": {
-            "text": f"{name} {version_}: {key_finding(package)} "
-            f"(risk {package.risk.overall:.2f}, {band.value})"
-        },
+        "message": {"text": text},
         "locations": [
             {
                 "physicalLocation": {

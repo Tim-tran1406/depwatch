@@ -7,14 +7,16 @@ known vulnerability, a long-stale release) is never hidden behind one number.
 
 from __future__ import annotations
 
-from rich.console import Console
+from rich.console import Console, RenderableType
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
 from depwatch.core.models import ScanDiff, ScanResult, ScoredPackage
 from depwatch.report.summary import (
+    any_fix,
     dominant_driver,
+    fix_hint,
     high_risk_count,
     key_finding,
     select_risky,
@@ -94,6 +96,7 @@ def _summary_panel(result: ScanResult) -> Panel:
 
 
 def _risk_table(packages: list[ScoredPackage]) -> Table:
+    show_fix = any_fix(packages)
     table = Table(show_edge=False, header_style="bold", pad_edge=False)
     table.add_column("#", justify="right")
     table.add_column("Package")
@@ -101,18 +104,23 @@ def _risk_table(packages: list[ScoredPackage]) -> Table:
     table.add_column("Type")
     table.add_column("Risk")
     table.add_column("Key finding")
+    if show_fix:
+        table.add_column("Fix")
     for rank, package in enumerate(packages, start=1):
         label, style = _BAND_STYLE[classify(package.risk.overall)]
         risk = Text(f"{label:<8} {package.risk.overall:.2f}", style=style)
         kind = "direct" if package.signals.is_direct else "transitive"
-        table.add_row(
+        cells: list[RenderableType] = [
             str(rank),
             package.signals.name,
             package.signals.version,
             kind,
             risk,
             key_finding(package),
-        )
+        ]
+        if show_fix:
+            cells.append(Text(fix_hint(package) or "—", style="cyan"))
+        table.add_row(*cells)
     return table
 
 

@@ -16,9 +16,40 @@ class OSVVulnerability(BaseModel):
     aliases: list[str]
     severity: list[dict[str, Any]]  # CVSS vectors: [{"type": "CVSS_V3", "score": "CVSS:3.1/..."}]
     severity_label: str | None  # GitHub's qualitative rating, e.g. "HIGH"
+    affected: list[dict[str, Any]] = []  # OSV "affected" entries, each with version ranges
 
     def cvss_vectors(self) -> list[str]:
         return [entry["score"] for entry in self.severity if "score" in entry]
+
+    def pypi_ranges(self) -> list[tuple[str | None, str | None]]:
+        """The affected version windows as (introduced, fixed) pairs.
+
+        Only ECOSYSTEM ranges are used (the PyPI version order). ``introduced`` is
+        None for "from the beginning"; ``fixed`` is None when the window has no clean
+        fix (an open-ended or last-affected range), so we never claim a fix that the
+        advisory does not actually state.
+        """
+        pairs: list[tuple[str | None, str | None]] = []
+        for entry in self.affected:
+            for rng in entry.get("ranges", []):
+                if rng.get("type") != "ECOSYSTEM":
+                    continue
+                introduced: str | None = None
+                open_window = False
+                for event in rng.get("events", []):
+                    if "introduced" in event:
+                        introduced = event["introduced"]
+                        open_window = True
+                    elif "fixed" in event:
+                        pairs.append((introduced, event["fixed"]))
+                        open_window = False
+                    elif "last_affected" in event or "limit" in event:
+                        # an inclusive/limit bound is not a clean fix point
+                        pairs.append((introduced, None))
+                        open_window = False
+                if open_window:
+                    pairs.append((introduced, None))
+        return pairs
 
 
 class OSVClient:
@@ -36,6 +67,7 @@ class OSVClient:
                 aliases=vuln.get("aliases", []),
                 severity=vuln.get("severity", []),
                 severity_label=vuln.get("database_specific", {}).get("severity"),
+                affected=vuln.get("affected", []),
             )
             for vuln in data.get("vulns", [])
         ]

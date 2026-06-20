@@ -2,8 +2,8 @@
 
 The flaky or optional sources (download stats, contributor count) degrade to a
 safe default instead of failing, so a missing signal never sinks a whole package.
-Severity weighting per vulnerability is a planned refinement; for now a package's
-vulnerabilities are treated as medium severity and the count drives the score.
+Vulnerabilities also carry their worst CVSS severity and the smallest upgrade that
+clears them, both worked out here while the raw advisories are in hand.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from depwatch.ingest.github import GitHubClient
 from depwatch.ingest.osv import OSVClient, OSVVulnerability
 from depwatch.ingest.pypi import PyPIClient
 from depwatch.ingest.pypistats import PyPIStatsClient
+from depwatch.scoring.remediation import safe_upgrade
 from depwatch.scoring.severity import best_severity
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,7 @@ class SignalCollector:
             vulnerability_count=count,
             highest_severity=highest_severity,
             vulnerability_ids=vulnerability_ids,
+            remediation=safe_upgrade(package.version, vulns),
             days_since_last_release=_days_since(pkg.last_release_at),
             monthly_downloads=downloads,
             contributor_count=contributors,

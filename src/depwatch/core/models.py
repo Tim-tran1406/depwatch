@@ -22,6 +22,15 @@ class ResolvedPackage(BaseModel):
     is_direct: bool
 
 
+class Remediation(BaseModel):
+    """The smallest upgrade that clears known vulnerabilities, when one exists."""
+
+    target_version: str  # the version to upgrade to
+    clears: int  # how many of the package's vulnerabilities it clears
+    total: int  # how many vulnerabilities were considered
+    unfixed_ids: list[str] = []  # advisories with no fixed version yet (only when partial)
+
+
 class PackageSignals(BaseModel):
     """Raw signals gathered for one package, before scoring."""
 
@@ -31,6 +40,7 @@ class PackageSignals(BaseModel):
     vulnerability_count: int = 0
     highest_severity: float | None = None  # 0-10, CVSS-style, when known
     vulnerability_ids: list[str] = []  # advisory ids, most severe first (CVE when available)
+    remediation: Remediation | None = None  # the safe upgrade, when vulnerabilities can be cleared
     days_since_last_release: int | None = None
     monthly_downloads: int | None = None  # None = unknown (neutral); 0 = genuinely unused
     contributor_count: int | None = None  # number of repo contributors (capped), bus-factor signal

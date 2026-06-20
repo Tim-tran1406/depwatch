@@ -28,6 +28,21 @@ def key_finding(package: ScoredPackage) -> str:
     return top.reason if top.score > 0 else "—"
 
 
+def fix_hint(package: ScoredPackage) -> str | None:
+    """A short, actionable upgrade note for a package, or None when none applies."""
+    r = package.signals.remediation
+    if r is None:
+        return None
+    if r.clears >= r.total:
+        return f"upgrade to {r.target_version}"
+    return f"upgrade to {r.target_version} (clears {r.clears} of {r.total})"
+
+
+def any_fix(packages: list[ScoredPackage]) -> bool:
+    """Whether any package has an upgrade to suggest — used to show the Fix column only then."""
+    return any(p.signals.remediation is not None for p in packages)
+
+
 def dominant_driver(packages: list[ScoredPackage]) -> str | None:
     """The dimension contributing the most risk across the whole scan."""
     totals: dict[str, float] = {}

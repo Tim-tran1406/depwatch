@@ -37,18 +37,18 @@ depwatch scan requirements.txt
 You get a short report with the riskiest packages at the top and the one finding that drives each one:
 
 ```
-╭─ depwatch ──────────────────────────────────────────────────╮
-│ Scanned 13 package(s) from requirements.txt                  │
-│ 1 high-risk  ·  top risk driver: vulnerabilities  ·  scan #1 │
-╰──────────────────────────────────────────────────────────────╯
- #  Package       Version  Type        Risk           Key finding
- 1  urllib3       1.26.5   direct      HIGH      0.35  11 known vulnerabilities
- 2  itsdangerous  2.2.0    transitive  MODERATE  0.24  last released 794 days ago
- 3  requests      2.31.0   direct      MODERATE  0.24  3 known vulnerabilities
+╭─ depwatch ──────────────────────────────────────────────╮
+│ Scanned 13 package(s) from requirements.txt             │
+│ 3 high-risk  ·  top risk driver: vulnerabilities        │
+╰──────────────────────────────────────────────────────────╯
+ #  Package   Version  Type    Risk            Key finding                 Fix
+ 1  pyyaml    5.3.1    direct   CRITICAL  0.50  1 known vulnerability …     upgrade to 5.4
+ 2  urllib3   1.26.5   direct   HIGH      0.35  8 known vulnerabilities …   upgrade to 2.7.0
+ 3  flask     2.0.1    direct   HIGH      0.34  2 known vulnerabilities …   upgrade to 3.1.3
 7 package(s) look low-risk.
 ```
 
-Healthy packages are not listed one by one — they are summarised, so the focus stays on the few that matter.
+Healthy packages are not listed one by one — they are summarised, so the focus stays on the few that matter. When a risky package has a known-safe upgrade, the **Fix** column shows the smallest version that clears its vulnerabilities — so the report tells you not just what is wrong but how to put it right.
 
 A few options:
 
@@ -82,7 +82,7 @@ jobs:
           fail-on: high
 ```
 
-It does three things: uploads each risky dependency to code scanning, so it shows up as an inline annotation on the pull request and in the Security tab; writes a table of the risky dependencies into the run summary; and fails the check if anything reaches the `fail-on` band (set `fail-on: off` to report without blocking). Code scanning is free on public repositories.
+It does three things: uploads each risky dependency to code scanning, so it shows up as an inline annotation on the pull request — with the suggested upgrade — and in the Security tab; writes a table of the risky dependencies into the run summary; and fails the check if anything reaches the `fail-on` band (set `fail-on: off` to report without blocking). Code scanning is free on public repositories.
 
 ## How the score works
 
@@ -97,6 +97,8 @@ Each package is scored from 0 (safe) to 1 (risky) on five signals:
 The overall score is a weighted blend of the five. That means one bad signal is deliberately diluted by the others, so the score is a broad measure of health rather than a single alarm. The specific finding — for example "11 known vulnerabilities" — is always shown next to the package, so nothing important hides behind the average.
 
 Vulnerabilities get one exception: a package with a known high- or critical-severity vulnerability is floored at that risk level, because a known exploit should not be hidden by otherwise-good health. Severity comes from the real CVSS score of each advisory, not a flat guess.
+
+For a vulnerable package, depwatch also works out the smallest upgrade that clears its known advisories — the lowest released version that falls outside every affected range — using the same OSV data. If no single version clears everything yet (an advisory has no fix, for instance), it suggests the version that clears the most and says how many remain.
 
 ## A shareable report
 
