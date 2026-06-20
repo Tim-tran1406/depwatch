@@ -1,8 +1,8 @@
 name: ci
 
 # Runs the same checks as local development — lint, format, types, tests — on
-# every push and pull request. The tests stub out the network, so this is fast
-# and never flaky.
+# every push and pull request, across the supported Python versions. The tests
+# stub out the network, so this is fast and never flaky.
 
 on:
   push:
@@ -10,16 +10,26 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Cancel an in-progress run when new commits land on the same branch.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up uv and Python
         uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
 
       - name: Install dependencies
         run: uv sync --frozen
