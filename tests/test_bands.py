@@ -1,4 +1,4 @@
-from depwatch.scoring.bands import RiskBand, classify
+from depwatch.scoring.bands import FailOn, RiskBand, classify, should_fail
 
 
 def test_classify_at_each_boundary() -> None:
@@ -19,3 +19,17 @@ def test_classify_never_decreases_as_score_rises() -> None:
         current = order.index(classify(step / 100))
         assert current >= previous
         previous = current
+
+
+def test_should_fail_off_never_trips() -> None:
+    for band in RiskBand:
+        assert should_fail(band, FailOn.OFF) is False
+
+
+def test_should_fail_trips_at_or_above_threshold() -> None:
+    assert should_fail(RiskBand.HIGH, FailOn.HIGH) is True
+    assert should_fail(RiskBand.CRITICAL, FailOn.HIGH) is True
+    assert should_fail(RiskBand.MODERATE, FailOn.HIGH) is False
+    assert should_fail(RiskBand.LOW, FailOn.MODERATE) is False
+    assert should_fail(RiskBand.MODERATE, FailOn.MODERATE) is True
+    assert should_fail(RiskBand.HIGH, FailOn.CRITICAL) is False

@@ -1,0 +1,40 @@
+name: "depwatch dependency risk"
+description: "Scan a requirements file and flag the dependencies that are genuinely risky."
+branding:
+  icon: "shield"
+  color: "purple"
+
+inputs:
+  requirements:
+    description: "Path to the requirements file to scan."
+    required: false
+    default: "requirements.txt"
+  fail-on:
+    description: "Fail the job when the worst risk reaches this band: off, moderate, high, critical."
+    required: false
+    default: "high"
+  limit:
+    description: "How many of the riskiest packages to list in the summary."
+    required: false
+    default: "10"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install depwatch
+      shell: bash
+      run: pip install "${{ github.action_path }}"
+
+    - name: Scan dependencies
+      shell: bash
+      run: |
+        depwatch scan "${{ inputs.requirements }}" \
+          --no-save \
+          --format markdown \
+          --limit "${{ inputs.limit }}" \
+          --fail-on "${{ inputs.fail-on }}" >> "$GITHUB_STEP_SUMMARY"

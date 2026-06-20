@@ -1,0 +1,24 @@
+name: dependency-risk
+
+# Demonstrates depwatch's own GitHub Action by scanning the sample project on
+# every push and pull request. It runs report-only (fail-on: off) because the
+# sample deliberately contains known-risky pins; real users set fail-on: high to
+# block a pull request that adds a risky dependency.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan sample requirements
+        uses: ./
+        with:
+          requirements: data/requirements-sample.txt
+          fail-on: "off"

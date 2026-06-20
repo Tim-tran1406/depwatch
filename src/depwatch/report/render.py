@@ -13,6 +13,12 @@ from rich.table import Table
 from rich.text import Text
 
 from depwatch.core.models import ScanResult, ScoredPackage
+from depwatch.report.summary import (
+    dominant_driver,
+    high_risk_count,
+    key_finding,
+    select_risky,
+)
 from depwatch.scoring.bands import RiskBand, classify
 
 # Band -> (label shown in the table, rich style).
@@ -22,7 +28,6 @@ _BAND_STYLE: dict[RiskBand, tuple[str, str]] = {
     RiskBand.HIGH: ("HIGH", "red"),
     RiskBand.CRITICAL: ("CRITICAL", "bold white on red"),
 }
-_HIGH_BANDS = (RiskBand.HIGH, RiskBand.CRITICAL)
 
 
 def render_scan(console: Console, result: ScanResult, *, limit: int = 10) -> None:
@@ -31,7 +36,7 @@ def render_scan(console: Console, result: ScanResult, *, limit: int = 10) -> Non
         console.print("No packages to scan.")
         return
     console.print(_summary_panel(result))
-    risky = [p for p in result.packages if classify(p.risk.overall) != RiskBand.LOW]
+    risky = select_risky(result.packages)
     if not risky:
         console.print(f"[green]All {len(result.packages)} packages look low-risk.[/green]")
         return
@@ -46,10 +51,10 @@ def scan_to_json(result: ScanResult) -> str:
 
 def _summary_panel(result: ScanResult) -> Panel:
     total = len(result.packages)
-    high = sum(1 for p in result.packages if classify(p.risk.overall) in _HIGH_BANDS)
+    high = high_risk_count(result.packages)
     lines = [f"Scanned [bold]{total}[/bold] package(s) from [cyan]{result.source}[/cyan]"]
     detail = f"[bold]{high}[/bold] high-risk"
-    driver = _dominant_driver(result.packages)
+    driver = dominant_driver(result.packages)
     if driver:
         detail += f"  ·  top risk driver: [bold]{driver}[/bold]"
     if result.scan_id is not None:
@@ -76,25 +81,9 @@ def _risk_table(packages: list[ScoredPackage]) -> Table:
             package.signals.version,
             kind,
             risk,
-            _key_finding(package),
+            key_finding(package),
         )
     return table
-
-
-def _key_finding(package: ScoredPackage) -> str:
-    top = max(package.risk.dimensions, key=lambda d: d.score)
-    return top.reason if top.score > 0 else "—"
-
-
-def _dominant_driver(packages: list[ScoredPackage]) -> str | None:
-    totals: dict[str, float] = {}
-    for package in packages:
-        for dimension in package.risk.dimensions:
-            totals[dimension.name] = totals.get(dimension.name, 0.0) + dimension.score
-    if not totals:
-        return None
-    name, total = max(totals.items(), key=lambda item: item[1])
-    return name if total > 0 else None
 
 
 def _print_footer(

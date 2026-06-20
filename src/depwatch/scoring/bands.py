@@ -25,6 +25,19 @@ class RiskBand(StrEnum):
     CRITICAL = "critical"
 
 
+# Bands from safest to riskiest, so thresholds can be compared by position.
+_SEVERITY = (RiskBand.LOW, RiskBand.MODERATE, RiskBand.HIGH, RiskBand.CRITICAL)
+
+
+class FailOn(StrEnum):
+    """The risk gate: fail the scan once the worst band reaches this level."""
+
+    OFF = "off"
+    MODERATE = "moderate"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
 def classify(score: float) -> RiskBand:
     """Map an overall risk score to its band."""
     if score >= _CRITICAL_FLOOR:
@@ -34,3 +47,10 @@ def classify(score: float) -> RiskBand:
     if score >= _MODERATE_FLOOR:
         return RiskBand.MODERATE
     return RiskBand.LOW
+
+
+def should_fail(worst: RiskBand, threshold: FailOn) -> bool:
+    """Whether a scan whose riskiest package is ``worst`` trips the ``threshold`` gate."""
+    if threshold is FailOn.OFF:
+        return False
+    return _SEVERITY.index(worst) >= _SEVERITY.index(RiskBand(threshold.value))

@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 from typer.testing import CliRunner
@@ -13,15 +14,17 @@ from depwatch.scoring.score import score_package
 runner = CliRunner()
 
 
-def _result(source: str, scan_id: int | None) -> ScanResult:
-    signals = PackageSignals(
-        name="urllib3", version="1.26.5", is_direct=True, vulnerability_count=11
-    )
-    scored = ScoredPackage(signals=signals, risk=score_package(signals))
+def _scored(name: str, **kwargs: Any) -> ScoredPackage:
+    signals = PackageSignals(name=name, version="1.0", is_direct=True, **kwargs)
+    return ScoredPackage(signals=signals, risk=score_package(signals))
+
+
+def _result(source: str, scan_id: int | None, **kwargs: Any) -> ScanResult:
+    package = _scored("urllib3", **(kwargs or {"vulnerability_count": 11}))
     return ScanResult(
         source=source,
         created_at=datetime(2026, 6, 20, 12, 0, 0),
-        packages=[scored],
+        packages=[package],
         scan_id=scan_id,
     )
 
@@ -43,17 +46,59 @@ def test_scan_renders_a_table(monkeypatch: pytest.MonkeyPatch, requirements: Pat
     assert "scan #1" in result.stdout
 
 
-def test_scan_json_flag_emits_valid_json(
+def test_scan_json_format_emits_valid_json(
     monkeypatch: pytest.MonkeyPatch, requirements: Path
 ) -> None:
     monkeypatch.setattr(service, "run_scan", lambda *a, **k: _result(str(requirements), 2))
 
-    result = runner.invoke(app, ["scan", str(requirements), "--json"])
+    result = runner.invoke(app, ["scan", str(requirements), "--format", "json"])
 
     assert result.exit_code == 0
     payload = json.loads(result.stdout)
     assert payload["scan_id"] == 2
     assert payload["packages"][0]["signals"]["name"] == "urllib3"
+
+
+def test_scan_markdown_format(monkeypatch: pytest.MonkeyPatch, requirements: Path) -> None:
+    monkeypatch.setattr(service, "run_scan", lambda *a, **k: _result(str(requirements), None))
+
+    result = runner.invoke(app, ["scan", str(requirements), "--format", "markdown"])
+
+    assert result.exit_code == 0
+    assert "## depwatch" in result.stdout
+    assert "| urllib3 |" in result.stdout
+
+
+def test_scan_writes_html_to_output_file(
+    monkeypatch: pytest.MonkeyPatch, requirements: Path, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(service, "run_scan", lambda *a, **k: _result(str(requirements), None))
+    out = tmp_path / "report.html"
+
+    result = runner.invoke(app, ["scan", str(requirements), "--format", "html", "-o", str(out)])
+
+    assert result.exit_code == 0
+    assert out.read_text().startswith("<!doctype html>")
+    assert "urllib3" in out.read_text()
+
+
+def test_fail_on_high_exits_nonzero_for_risky_scan(
+    monkeypatch: pytest.MonkeyPatch, requirements: Path
+) -> None:
+    monkeypatch.setattr(service, "run_scan", lambda *a, **k: _result(str(requirements), None))
+
+    result = runner.invoke(app, ["scan", str(requirements), "--fail-on", "high"])
+
+    assert result.exit_code == 1  # urllib3 with 11 vulns trips the gate
+    assert "urllib3" in result.stdout  # the report still prints before the gate fails
+
+
+def test_fail_on_off_is_the_default(monkeypatch: pytest.MonkeyPatch, requirements: Path) -> None:
+    monkeypatch.setattr(service, "run_scan", lambda *a, **k: _result(str(requirements), None))
+
+    result = runner.invoke(app, ["scan", str(requirements)])
+
+    assert result.exit_code == 0
 
 
 def test_scan_passes_no_save_through(monkeypatch: pytest.MonkeyPatch, requirements: Path) -> None:
