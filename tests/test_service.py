@@ -34,9 +34,11 @@ def settings(tmp_path: Path) -> Settings:
     return Settings(cache_dir=tmp_path / "cache", db_path=tmp_path / "depwatch.duckdb")
 
 
-def _stub_score(monkeypatch: pytest.MonkeyPatch, packages: Iterable[ScoredPackage]) -> None:
-    async def fake(requirements: Path, settings: Settings) -> list[ScoredPackage]:
-        return list(packages)
+def _stub_score(
+    monkeypatch: pytest.MonkeyPatch, packages: Iterable[ScoredPackage], skipped: int = 0
+) -> None:
+    async def fake(requirements: Path, settings: Settings) -> tuple[list[ScoredPackage], int]:
+        return list(packages), skipped
 
     monkeypatch.setattr(service, "_score", fake)
 
@@ -76,3 +78,13 @@ def test_run_scan_skips_save_when_disabled(
     assert result.scan_id is None
     with ScanStore(settings.db_path) as store:
         assert store.list_scans() == []
+
+
+def test_run_scan_reports_skipped_packages(
+    monkeypatch: pytest.MonkeyPatch, settings: Settings, tmp_path: Path
+) -> None:
+    _stub_score(monkeypatch, [RISKY], skipped=2)
+
+    result = service.run_scan(tmp_path / "r.txt", settings, save=False, created_at=T0)
+
+    assert result.skipped == 2

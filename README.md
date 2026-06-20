@@ -56,6 +56,8 @@ A few options:
 - `--output report.html` — write the report to a file instead of the screen.
 - `--limit 20` — show more of the risky packages.
 - `--fail-on {off,moderate,high,critical}` — exit with an error when the worst package reaches that band. This is what makes it useful in CI.
+- `--fail-on-incomplete` — exit with an error if any package could not be scanned, so a scan degraded by an outage cannot quietly pass as a clean bill of health.
+- `--since-last` — show what changed since the previous scan of the same file (new, removed, worse, or improved packages).
 - `--no-save` — do not record the scan in the local database.
 
 Every scan is saved to a small DuckDB database (`data/depwatch.duckdb`) so you can keep a history of runs.

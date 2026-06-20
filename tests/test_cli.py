@@ -19,13 +19,14 @@ def _scored(name: str, **kwargs: Any) -> ScoredPackage:
     return ScoredPackage(signals=signals, risk=score_package(signals))
 
 
-def _result(source: str, scan_id: int | None, **kwargs: Any) -> ScanResult:
+def _result(source: str, scan_id: int | None, *, skipped: int = 0, **kwargs: Any) -> ScanResult:
     package = _scored("urllib3", **(kwargs or {"vulnerability_count": 11}))
     return ScanResult(
         source=source,
         created_at=datetime(2026, 6, 20, 12, 0, 0),
         packages=[package],
         scan_id=scan_id,
+        skipped=skipped,
     )
 
 
@@ -119,6 +120,21 @@ def test_scan_passes_no_save_through(monkeypatch: pytest.MonkeyPatch, requiremen
 def test_scan_rejects_a_missing_file() -> None:
     result = runner.invoke(app, ["scan", "does-not-exist.txt"])
     assert result.exit_code != 0
+
+
+def test_fail_on_incomplete_exits_nonzero_when_packages_skipped(
+    monkeypatch: pytest.MonkeyPatch, requirements: Path
+) -> None:
+    monkeypatch.setattr(
+        service,
+        "run_scan",
+        lambda *a, **k: _result(str(requirements), None, skipped=2, vulnerability_count=0),
+    )
+
+    result = runner.invoke(app, ["scan", str(requirements), "--fail-on-incomplete"])
+
+    assert result.exit_code == 1
+    assert "could not be scanned" in result.stdout
 
 
 def test_since_last_renders_the_diff(monkeypatch: pytest.MonkeyPatch, requirements: Path) -> None:

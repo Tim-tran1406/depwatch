@@ -39,6 +39,11 @@ def scan_to_markdown(result: ScanResult, *, limit: int = 10) -> str:
     if result.scan_id is not None:
         headline += f" · saved as scan #{result.scan_id}"
     lines += [headline, ""]
+    if result.skipped:
+        lines += [
+            f"> ⚠️ {result.skipped} package(s) could not be scanned — results may be incomplete.",
+            "",
+        ]
 
     risky = select_risky(result.packages)
     if not risky:

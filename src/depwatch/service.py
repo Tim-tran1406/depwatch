@@ -27,7 +27,8 @@ from depwatch.storage.store import ScanStore
 from depwatch.trends import compute_diff
 
 
-async def _score(requirements: Path, settings: Settings) -> list[ScoredPackage]:
+async def _score(requirements: Path, settings: Settings) -> tuple[list[ScoredPackage], int]:
+    """Return the scored packages and how many resolved packages could not be scored."""
     parsed = parse_requirements_file(requirements)
     async with AsyncFetcher(settings) as fetcher:
         depsdev = DepsDevClient(fetcher, settings)
@@ -40,7 +41,8 @@ async def _score(requirements: Path, settings: Settings) -> list[ScoredPackage]:
             PyPIStatsClient(fetcher, settings),
             GitHubClient(fetcher, settings),
         )
-        return await ScoringEngine(collector).score_all(resolved)
+        scored = await ScoringEngine(collector).score_all(resolved)
+    return scored, len(resolved) - len(scored)
 
 
 def run_scan(
@@ -52,14 +54,18 @@ def run_scan(
 ) -> ScanResult:
     """Parse, resolve, score, optionally persist, and return the result riskiest-first."""
     moment = created_at or datetime.now(UTC)
-    packages = asyncio.run(_score(requirements, settings))
+    packages, skipped = asyncio.run(_score(requirements, settings))
     packages.sort(key=lambda p: p.risk.overall, reverse=True)
     scan_id: int | None = None
     if save:
         with ScanStore(settings.db_path) as store:
             scan_id = store.save_scan(str(requirements), packages, created_at=moment)
     return ScanResult(
-        source=str(requirements), created_at=moment, packages=packages, scan_id=scan_id
+        source=str(requirements),
+        created_at=moment,
+        packages=packages,
+        scan_id=scan_id,
+        skipped=skipped,
     )
 
 

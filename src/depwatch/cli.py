@@ -56,6 +56,9 @@ def scan(
     since_last: bool = typer.Option(
         False, "--since-last", help="Show what changed since the previous scan of this file."
     ),
+    fail_on_incomplete: bool = typer.Option(
+        False, "--fail-on-incomplete", help="Exit non-zero if any package could not be scanned."
+    ),
 ) -> None:
     """Scan a requirements file and report the riskiest dependencies."""
     result = service.run_scan(requirements, settings, save=save)
@@ -67,7 +70,9 @@ def scan(
             console.print("[dim]No previous scan of this file to compare against.[/dim]")
         else:
             render_diff(console, diff)
-    if should_fail(worst_band(result.packages), fail_on):
+    risk_gate = should_fail(worst_band(result.packages), fail_on)
+    incomplete_gate = fail_on_incomplete and result.skipped > 0
+    if risk_gate or incomplete_gate:
         raise typer.Exit(code=1)
 
 

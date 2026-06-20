@@ -64,6 +64,7 @@ class ScanResult(BaseModel):
     created_at: datetime
     packages: list[ScoredPackage]
     scan_id: int | None = None  # set once the scan has been saved
+    skipped: int = 0  # packages that resolved but could not be scored (e.g. an API was down)
 
 
 class PackageChange(BaseModel):

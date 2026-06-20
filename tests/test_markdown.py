@@ -47,6 +47,14 @@ def test_markdown_when_all_healthy() -> None:
     assert "|" not in out  # no table rendered
 
 
+def test_markdown_notes_incomplete_scans() -> None:
+    result = ScanResult(
+        source="requirements.txt", created_at=DATE, packages=[VULNERABLE], scan_id=None, skipped=2
+    )
+    out = scan_to_markdown(result)
+    assert "2 package(s) could not be scanned" in out
+
+
 def test_markdown_when_empty() -> None:
     out = scan_to_markdown(_result([]))
     assert "No packages to scan" in out

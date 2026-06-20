@@ -65,6 +65,14 @@ def test_report_hides_healthy_packages_but_counts_them() -> None:
     assert "1 package(s) look low-risk" in out
 
 
+def test_report_warns_about_skipped_packages() -> None:
+    result = ScanResult(
+        source="requirements.txt", created_at=T0, packages=[VULNERABLE], scan_id=None, skipped=3
+    )
+    out = _render(result)
+    assert "3 package(s) could not be scanned" in out
+
+
 def test_report_when_everything_is_healthy() -> None:
     result = ScanResult(source="requirements.txt", created_at=T0, packages=[HEALTHY], scan_id=None)
     out = _render(result)

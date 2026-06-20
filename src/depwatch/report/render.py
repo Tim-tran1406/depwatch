@@ -43,14 +43,24 @@ def render_scan(console: Console, result: ScanResult, *, limit: int = 10) -> Non
     """Print the report: a summary panel, then the riskiest packages."""
     if not result.packages:
         console.print("No packages to scan.")
+        _print_skipped(console, result)
         return
     console.print(_summary_panel(result))
+    _print_skipped(console, result)
     risky = select_risky(result.packages)
     if not risky:
         console.print(f"[green]All {len(result.packages)} packages look low-risk.[/green]")
         return
     console.print(_risk_table(risky[:limit]))
     _print_footer(console, result, risky, limit)
+
+
+def _print_skipped(console: Console, result: ScanResult) -> None:
+    if result.skipped:
+        console.print(
+            f"[yellow]⚠ {result.skipped} package(s) could not be scanned — "
+            f"a data source may be down, so results may be incomplete.[/yellow]"
+        )
 
 
 def scan_to_json(result: ScanResult) -> str:
