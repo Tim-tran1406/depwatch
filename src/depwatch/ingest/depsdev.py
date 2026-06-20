@@ -32,6 +32,12 @@ class DepsDevProject(BaseModel):
     scorecard_checks: dict[str, int]
 
 
+class DepsDevDependencyNode(BaseModel):
+    name: str
+    version: str
+    relation: str  # SELF, DIRECT, or INDIRECT
+
+
 class DepsDevClient:
     def __init__(self, fetcher: AsyncFetcher, settings: Settings) -> None:
         self._fetcher = fetcher
@@ -70,3 +76,18 @@ class DepsDevClient:
             scorecard_overall=scorecard.get("overallScore"),
             scorecard_checks=checks,
         )
+
+    async def get_dependencies(self, name: str, version: str) -> list[DepsDevDependencyNode]:
+        url = (
+            f"{self._base}/systems/pypi/packages/{quote(name, safe='')}"
+            f"/versions/{quote(version, safe='')}:dependencies"
+        )
+        data = await self._fetcher.get_json(url)
+        return [
+            DepsDevDependencyNode(
+                name=node["versionKey"]["name"],
+                version=node["versionKey"]["version"],
+                relation=node.get("relation", ""),
+            )
+            for node in data.get("nodes", [])
+        ]
