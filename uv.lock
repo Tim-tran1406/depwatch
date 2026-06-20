@@ -241,6 +241,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "rich" },
+    { name = "tenacity" },
     { name = "typer" },
 ]
 
@@ -267,6 +268,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.3" },
     { name = "rich", specifier = ">=13.7" },
     { name = "streamlit", marker = "extra == 'app'", specifier = ">=1.36" },
+    { name = "tenacity", specifier = ">=9.1.4" },
     { name = "typer", specifier = ">=0.12" },
 ]
 provides-extras = ["app"]
