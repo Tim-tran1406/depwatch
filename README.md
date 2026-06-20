@@ -86,6 +86,8 @@ Each package is scored from 0 (safe) to 1 (risky) on five signals:
 
 The overall score is a weighted blend of the five. That means one bad signal is deliberately diluted by the others, so the score is a broad measure of health rather than a single alarm. The specific finding — for example "11 known vulnerabilities" — is always shown next to the package, so nothing important hides behind the average.
 
+Vulnerabilities get one exception: a package with a known high- or critical-severity vulnerability is floored at that risk level, because a known exploit should not be hidden by otherwise-good health. Severity comes from the real CVSS score of each advisory, not a flat guess.
+
 ## A shareable report
 
 `--format html` builds a single self-contained page (styles included, nothing external to host). A GitHub Pages workflow generates this for the sample project and publishes it; to use it on your own repository, enable Pages once under **Settings → Pages → Source: "GitHub Actions"**.

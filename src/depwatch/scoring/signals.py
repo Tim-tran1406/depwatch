@@ -63,12 +63,12 @@ class SignalCollector:
             license=pkg.license or _first_license(version),
         )
 
-    async def _monthly_downloads(self, name: str) -> int:
+    async def _monthly_downloads(self, name: str) -> int | None:
         try:
             return (await self._pypistats.recent_downloads(name)).last_month
         except Exception as exc:
             logger.warning("no download stats for %s: %s", name, exc)
-            return 0
+            return None  # unknown, not zero — the scorer treats this as neutral
 
     async def _contributor_count(self, source_url: str | None) -> int | None:
         owner_repo = _github_owner_repo(source_url)

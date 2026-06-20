@@ -30,7 +30,7 @@ SCHEMA_STATEMENTS: tuple[str, ...] = (
         vulnerability_count     INTEGER NOT NULL,
         highest_severity        DOUBLE,
         days_since_last_release INTEGER,
-        monthly_downloads       BIGINT  NOT NULL,
+        monthly_downloads       BIGINT,
         contributor_count       INTEGER,
         license                 VARCHAR
     )

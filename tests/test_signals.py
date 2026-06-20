@@ -124,7 +124,7 @@ def test_collect_degrades_when_optional_sources_fail(httpx_mock: HTTPXMock, tmp_
 
     signals = _collect(settings, ResolvedPackage(name="lonely", version="1.0", is_direct=False))
 
-    assert signals.monthly_downloads == 0  # pypistats 404 -> safe default
+    assert signals.monthly_downloads is None  # pypistats 404 -> unknown, not zero
     assert signals.contributor_count is None  # no source repo -> no GitHub lookup
     assert signals.vulnerability_count == 0
     assert signals.license == "MIT"

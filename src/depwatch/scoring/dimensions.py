@@ -15,9 +15,20 @@ from depwatch.core.models import DimensionScore, PackageSignals
 _FRESH_DAYS = 180
 _STALE_DAYS = 730
 
-# License buckets, matched as substrings of the declared license text.
+# License buckets, matched as substrings of the declared license text. Includes
+# spelled-out names, since "GNU General Public License" contains no "gpl".
 _PERMISSIVE = ("mit", "apache", "bsd", "isc", "python", "psf", "zlib", "unlicense")
-_COPYLEFT = ("gpl", "agpl", "lgpl", "mpl", "epl", "cddl")
+_COPYLEFT = (
+    "gpl",
+    "agpl",
+    "lgpl",
+    "mpl",
+    "epl",
+    "cddl",
+    "general public license",
+    "mozilla public license",
+    "eclipse public license",
+)
 
 
 def _clamp(value: float) -> float:
@@ -70,6 +81,8 @@ def score_bus_factor(s: PackageSignals) -> DimensionScore:
 
 
 def score_adoption(s: PackageSignals) -> DimensionScore:
+    if s.monthly_downloads is None:
+        return DimensionScore(name="adoption", score=0.5, reason="download stats unavailable")
     # Log scale: ~10M downloads/month is effectively zero risk; zero downloads is full risk.
     score = _clamp(1.0 - math.log10(s.monthly_downloads + 1) / 7.0)
     return DimensionScore(

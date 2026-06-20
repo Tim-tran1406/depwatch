@@ -75,6 +75,11 @@ def test_zero_adoption_is_max() -> None:
     assert score_adoption(_signals(monthly_downloads=0)).score == 1.0
 
 
+def test_unknown_adoption_is_moderate() -> None:
+    # Missing download stats are unknown, not zero — neutral, not max risk.
+    assert score_adoption(_signals(monthly_downloads=None)).score == 0.5
+
+
 # --- license ---
 
 
@@ -87,6 +92,8 @@ def test_permissive_licenses_are_safe() -> None:
 def test_copyleft_license_is_moderate() -> None:
     assert score_license(_signals(license="GPL-3.0")).score == 0.4
     assert score_license(_signals(license="AGPL-3.0")).score == 0.4
+    # Spelled-out names contain no "gpl" abbreviation but are still copyleft.
+    assert score_license(_signals(license="GNU General Public License v3")).score == 0.4
 
 
 def test_missing_license_is_risky() -> None:
@@ -117,7 +124,7 @@ _signal_strategy = st.builds(
     vulnerability_count=st.integers(min_value=0, max_value=50),
     highest_severity=st.one_of(st.none(), st.floats(min_value=0, max_value=10)),
     days_since_last_release=st.one_of(st.none(), st.integers(min_value=0, max_value=5000)),
-    monthly_downloads=st.integers(min_value=0, max_value=2_000_000_000),
+    monthly_downloads=st.one_of(st.none(), st.integers(min_value=0, max_value=2_000_000_000)),
     contributor_count=st.one_of(st.none(), st.integers(min_value=1, max_value=500)),
     license=st.one_of(st.none(), st.sampled_from(["MIT", "Apache-2.0", "GPL-3.0", "", "Custom"])),
 )

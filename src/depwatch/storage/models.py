@@ -30,7 +30,7 @@ class StoredPackage(BaseModel):
     vulnerability_count: int
     highest_severity: float | None
     days_since_last_release: int | None
-    monthly_downloads: int
+    monthly_downloads: int | None
     contributor_count: int | None
     license: str | None
     dimensions: list[StoredDimension]

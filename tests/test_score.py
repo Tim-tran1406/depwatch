@@ -40,6 +40,33 @@ def test_overall_is_the_weighted_average_of_dimensions() -> None:
     assert abs(risk.overall - expected) < 1e-9
 
 
+def test_critical_vulnerability_floors_the_overall_score() -> None:
+    # Otherwise pristine, but carries one critical CVE: must read as critical overall,
+    # not be diluted to moderate by good health on every other dimension.
+    pristine_but_critical = _signals(
+        vulnerability_count=1,
+        highest_severity=9.8,
+        days_since_last_release=10,
+        contributor_count=200,
+        monthly_downloads=500_000_000,
+        license="MIT",
+    )
+    assert score_package(pristine_but_critical).overall >= 0.5
+
+
+def test_floor_does_not_apply_for_moderate_severity() -> None:
+    # A moderate-severity issue in an otherwise healthy package should not be floored up.
+    moderate = _signals(
+        vulnerability_count=1,
+        highest_severity=5.0,
+        days_since_last_release=10,
+        contributor_count=200,
+        monthly_downloads=500_000_000,
+        license="MIT",
+    )
+    assert score_package(moderate).overall < 0.3
+
+
 def test_reports_all_five_dimensions() -> None:
     risk = score_package(_signals())
     assert {d.name for d in risk.dimensions} == {

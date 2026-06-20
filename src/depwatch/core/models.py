@@ -32,7 +32,7 @@ class PackageSignals(BaseModel):
     highest_severity: float | None = None  # 0-10, CVSS-style, when known
     vulnerability_ids: list[str] = []  # advisory ids, most severe first (CVE when available)
     days_since_last_release: int | None = None
-    monthly_downloads: int = 0
+    monthly_downloads: int | None = None  # None = unknown (neutral); 0 = genuinely unused
     contributor_count: int | None = None  # number of repo contributors (capped), bus-factor signal
     license: str | None = None
 

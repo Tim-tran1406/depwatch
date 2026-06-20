@@ -16,6 +16,7 @@ _CRITICAL_FLOOR = 0.50
 
 # At or above this overall score, a package is "high risk" (high or critical).
 HIGH_RISK_FLOOR = _HIGH_FLOOR
+CRITICAL_RISK_FLOOR = _CRITICAL_FLOOR
 
 
 class RiskBand(StrEnum):
