@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -52,3 +54,12 @@ class RiskScore(BaseModel):
 class ScoredPackage(BaseModel):
     signals: PackageSignals
     risk: RiskScore
+
+
+class ScanResult(BaseModel):
+    """The outcome of one scan: the scored packages plus where and when it ran."""
+
+    source: str
+    created_at: datetime
+    packages: list[ScoredPackage]
+    scan_id: int | None = None  # set once the scan has been saved

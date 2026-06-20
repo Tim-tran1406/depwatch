@@ -15,6 +15,7 @@ from types import TracebackType
 import duckdb
 
 from depwatch.core.models import ScoredPackage
+from depwatch.scoring.bands import HIGH_RISK_FLOOR
 from depwatch.storage.models import (
     DimensionAverage,
     ScanSummary,
@@ -23,8 +24,9 @@ from depwatch.storage.models import (
 )
 from depwatch.storage.schema import apply_schema
 
-# Risk at or above this counts as "high" in the summary; tunable in one place.
-HIGH_RISK_THRESHOLD = 0.5
+# Risk at or above this counts as "high" in the summary; shared with the report's
+# bands so the two never disagree about what "high risk" means.
+HIGH_RISK_THRESHOLD = HIGH_RISK_FLOOR
 
 _MEMORY = ":memory:"
 
