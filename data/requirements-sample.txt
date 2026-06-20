@@ -1,4 +1,4 @@
-requests==2.31.0
+requests==2.34.2
 flask==2.0.1
 numpy==1.26.4
 pyyaml==5.3.1
