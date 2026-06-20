@@ -36,7 +36,7 @@ jobs:
           depwatch scan data/requirements-sample.txt \
             --no-save --format html --output site/index.html
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site
 
