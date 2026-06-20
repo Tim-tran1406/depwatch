@@ -52,7 +52,7 @@ Healthy packages are not listed one by one — they are summarised, so the focus
 
 A few options:
 
-- `--format {table,json,markdown,html}` — choose the output. `json` is handy for piping into other tools; `html` produces a self-contained page.
+- `--format {table,json,markdown,html,sarif}` — choose the output. `json` is handy for piping into other tools; `html` produces a self-contained page; `sarif` is what GitHub code scanning reads.
 - `--output report.html` — write the report to a file instead of the screen.
 - `--limit 20` — show more of the risky packages.
 - `--fail-on {off,moderate,high,critical}` — exit with an error when the worst package reaches that band. This is what makes it useful in CI.
@@ -65,14 +65,22 @@ Every scan is saved to a small DuckDB database (`data/depwatch.duckdb`) so you c
 depwatch ships as a GitHub Action, so it can check dependencies on every pull request and block one that adds a risky package. Add this to a workflow:
 
 ```yaml
-- uses: actions/checkout@v4
-- uses: Tim-tran1406/depwatch@main
-  with:
-    requirements: requirements.txt
-    fail-on: high
+permissions:
+  contents: read
+  security-events: write   # lets depwatch post findings to code scanning
+
+jobs:
+  depwatch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Tim-tran1406/depwatch@v1
+        with:
+          requirements: requirements.txt
+          fail-on: high
 ```
 
-It writes a table of the risky dependencies into the run summary, and fails the check if anything reaches the `fail-on` band. Set `fail-on: off` to report without blocking.
+It does three things: uploads each risky dependency to code scanning, so it shows up as an inline annotation on the pull request and in the Security tab; writes a table of the risky dependencies into the run summary; and fails the check if anything reaches the `fail-on` band (set `fail-on: off` to report without blocking). Code scanning is free on public repositories.
 
 ## How the score works
 

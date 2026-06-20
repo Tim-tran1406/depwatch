@@ -30,8 +30,28 @@ runs:
       shell: bash
       run: pip install "${{ github.action_path }}"
 
-    - name: Scan dependencies
+    # The two scans below share one cache dir, so the second reads the first's
+    # cached API responses instead of hitting the network again. The token lifts
+    # the GitHub API rate limit so contributor counts work on real projects.
+    - name: Scan dependencies (SARIF)
       shell: bash
+      env:
+        DEPWATCH_GITHUB_TOKEN: ${{ github.token }}
+        DEPWATCH_CACHE_DIR: ${{ runner.temp }}/depwatch-cache
+      run: |
+        depwatch scan "${{ inputs.requirements }}" \
+          --no-save --format sarif --output depwatch.sarif
+
+    - name: Upload findings to code scanning
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: depwatch.sarif
+
+    - name: Write summary and gate
+      shell: bash
+      env:
+        DEPWATCH_GITHUB_TOKEN: ${{ github.token }}
+        DEPWATCH_CACHE_DIR: ${{ runner.temp }}/depwatch-cache
       run: |
         depwatch scan "${{ inputs.requirements }}" \
           --no-save \

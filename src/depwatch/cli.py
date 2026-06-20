@@ -14,6 +14,7 @@ from depwatch.core.models import ScanResult
 from depwatch.report.html import scan_to_html
 from depwatch.report.markdown import scan_to_markdown
 from depwatch.report.render import render_diff, render_scan, scan_to_json
+from depwatch.report.sarif import scan_to_sarif
 from depwatch.report.summary import worst_band
 from depwatch.scoring.bands import FailOn, should_fail
 
@@ -28,6 +29,7 @@ class OutputFormat(StrEnum):
     JSON = "json"
     MARKDOWN = "markdown"
     HTML = "html"
+    SARIF = "sarif"
 
 
 @app.callback()
@@ -57,7 +59,7 @@ def scan(
 ) -> None:
     """Scan a requirements file and report the riskiest dependencies."""
     result = service.run_scan(requirements, settings, save=save)
-    _emit(result, output_format, output, limit)
+    _emit(result, output_format, output, limit, requirements)
     if since_last and output_format is OutputFormat.TABLE and output is None:
         diff = service.diff_against_previous(result, settings)
         console = Console()
@@ -69,7 +71,13 @@ def scan(
         raise typer.Exit(code=1)
 
 
-def _emit(result: ScanResult, output_format: OutputFormat, output: Path | None, limit: int) -> None:
+def _emit(
+    result: ScanResult,
+    output_format: OutputFormat,
+    output: Path | None,
+    limit: int,
+    requirements: Path,
+) -> None:
     if output_format is OutputFormat.TABLE and output is None:
         render_scan(Console(), result, limit=limit)
         return
@@ -82,6 +90,8 @@ def _emit(result: ScanResult, output_format: OutputFormat, output: Path | None, 
         text = scan_to_json(result)
     elif output_format is OutputFormat.MARKDOWN:
         text = scan_to_markdown(result, limit=limit)
+    elif output_format is OutputFormat.SARIF:
+        text = scan_to_sarif(result, requirements)
     else:
         text = scan_to_html(result, limit=limit)
 
