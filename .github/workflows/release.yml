@@ -1,13 +1,13 @@
 name: release
 
-# Publishes depwatch to PyPI when a GitHub Release is published. Uses PyPI
-# Trusted Publishing (OIDC), so there is no API token to store: configure the
-# trusted publisher on PyPI once (project "depwatch", this repo, workflow
-# "release.yml", environment "pypi"). Until that is set up, this does nothing.
+# Publishes depwatch to PyPI via Trusted Publishing (OIDC) — no stored token.
+# Manual-only for now: the "depwatch" name is already taken on PyPI by an
+# unrelated project, so auto-publishing on every release would just fail. To
+# enable it, rename the distribution in pyproject.toml to a free name, configure
+# a PyPI trusted publisher for that name (this repo, workflow "release.yml",
+# environment "pypi"), then add back the `release: [published]` trigger below.
 
 on:
-  release:
-    types: [published]
   workflow_dispatch:
 
 jobs:

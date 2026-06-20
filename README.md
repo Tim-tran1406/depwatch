@@ -24,7 +24,7 @@ cd depwatch
 uv sync
 ```
 
-That gives you the `depwatch` command inside the project's environment (`uv run depwatch ...`). Once it is published to PyPI you will also be able to `pip install depwatch`.
+That gives you the `depwatch` command inside the project's environment (`uv run depwatch ...`). The easiest way to run it on a project, though, is the GitHub Action below.
 
 ## Using it
 
@@ -135,7 +135,7 @@ git tag v1.2.0
 git push origin main v1.2.0
 ```
 
-Publishing the release triggers the release workflow, which builds the package and pushes it to PyPI using trusted publishing (no stored token). Consumers of the Action pin the major version (`@v1`); that tag is moved forward to each new `v1.x` release.
+Publishing the release updates the [Marketplace listing](https://github.com/marketplace/actions/depwatch-dependency-risk). Consumers of the Action pin the major version (`@v1`); that tag is moved forward to each new `v1.x` release. Publishing to PyPI is wired up in `release.yml` but kept manual — the `depwatch` name is already taken on PyPI, so enabling `pip install` means renaming the distribution to a free name first.
 
 ## License
 
