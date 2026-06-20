@@ -43,7 +43,7 @@ runs:
           --no-save --format sarif --output depwatch.sarif
 
     - name: Upload findings to code scanning
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: depwatch.sarif
 
