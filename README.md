@@ -124,6 +124,17 @@ uv run pytest
 
 The test suite stubs out the network, so it is fast and deterministic; a separate live check exercises the real APIs.
 
+## Releasing
+
+To cut a release: bump `version` in `pyproject.toml`, tag the commit to match, and push both, then publish a GitHub release for that tag:
+
+```
+git tag v1.2.0
+git push origin main v1.2.0
+```
+
+Publishing the release triggers the release workflow, which builds the package and pushes it to PyPI using trusted publishing (no stored token). Consumers of the Action pin the major version (`@v1`); that tag is moved forward to each new `v1.x` release.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

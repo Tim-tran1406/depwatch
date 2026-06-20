@@ -1,6 +1,6 @@
 [project]
 name = "depwatch"
-version = "0.1.0"
+version = "1.0.0"
 description = "Scan a project's Python dependencies and surface the few that are actually risky."
 readme = "README.md"
 requires-python = ">=3.12"
