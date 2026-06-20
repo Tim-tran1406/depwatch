@@ -13,7 +13,7 @@ from depwatch.config import settings
 from depwatch.core.models import ScanResult
 from depwatch.report.html import scan_to_html
 from depwatch.report.markdown import scan_to_markdown
-from depwatch.report.render import render_scan, scan_to_json
+from depwatch.report.render import render_diff, render_scan, scan_to_json
 from depwatch.report.summary import worst_band
 from depwatch.scoring.bands import FailOn, should_fail
 
@@ -51,10 +51,20 @@ def scan(
     fail_on: FailOn = typer.Option(
         FailOn.OFF, "--fail-on", help="Exit non-zero when the worst risk reaches this band."
     ),
+    since_last: bool = typer.Option(
+        False, "--since-last", help="Show what changed since the previous scan of this file."
+    ),
 ) -> None:
     """Scan a requirements file and report the riskiest dependencies."""
     result = service.run_scan(requirements, settings, save=save)
     _emit(result, output_format, output, limit)
+    if since_last and output_format is OutputFormat.TABLE and output is None:
+        diff = service.diff_against_previous(result, settings)
+        console = Console()
+        if diff is None:
+            console.print("[dim]No previous scan of this file to compare against.[/dim]")
+        else:
+            render_diff(console, diff)
     if should_fail(worst_band(result.packages), fail_on):
         raise typer.Exit(code=1)
 

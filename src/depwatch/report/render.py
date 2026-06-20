@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from depwatch.core.models import ScanResult, ScoredPackage
+from depwatch.core.models import ScanDiff, ScanResult, ScoredPackage
 from depwatch.report.summary import (
     dominant_driver,
     high_risk_count,
@@ -20,6 +20,15 @@ from depwatch.report.summary import (
     select_risky,
 )
 from depwatch.scoring.bands import RiskBand, classify
+
+# How each kind of change is marked and coloured, worst news first.
+_CHANGE_STYLE: dict[str, tuple[str, str]] = {
+    "worsened": ("▲", "red"),
+    "added": ("+", "yellow"),
+    "removed": ("-", "dim"),
+    "improved": ("✓", "green"),
+}
+_CHANGE_ORDER = ["worsened", "added", "removed", "improved"]
 
 # Band -> (label shown in the table, rich style).
 _BAND_STYLE: dict[RiskBand, tuple[str, str]] = {
@@ -47,6 +56,17 @@ def render_scan(console: Console, result: ScanResult, *, limit: int = 10) -> Non
 def scan_to_json(result: ScanResult) -> str:
     """Serialise the full result for piping into other tools."""
     return result.model_dump_json(indent=2)
+
+
+def render_diff(console: Console, diff: ScanDiff) -> None:
+    """Print what changed since the previous scan."""
+    if not diff.changes:
+        console.print(f"[dim]No changes since scan #{diff.previous_scan_id}.[/dim]")
+        return
+    console.print(f"\n[bold]Changes since scan #{diff.previous_scan_id}:[/bold]")
+    for change in sorted(diff.changes, key=lambda c: _CHANGE_ORDER.index(c.status)):
+        marker, style = _CHANGE_STYLE[change.status]
+        console.print(f"  [{style}]{marker} {change.name:<18}[/{style}] {change.detail}")
 
 
 def _summary_panel(result: ScanResult) -> Panel:

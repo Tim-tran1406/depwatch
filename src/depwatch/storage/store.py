@@ -160,6 +160,22 @@ class ScanStore:
         ).fetchall()
         return self._to_summary(rows[0]) if rows else None
 
+    def latest_scan_for(self, source: str, before: int | None = None) -> int | None:
+        """The most recent scan id for a source, optionally strictly before a given id."""
+        if before is None:
+            rows = self._con.execute(
+                "SELECT scan_id FROM scans WHERE source = ? "
+                "ORDER BY created_at DESC, scan_id DESC LIMIT 1",
+                [source],
+            ).fetchall()
+        else:
+            rows = self._con.execute(
+                "SELECT scan_id FROM scans WHERE source = ? AND scan_id < ? "
+                "ORDER BY created_at DESC, scan_id DESC LIMIT 1",
+                [source, before],
+            ).fetchall()
+        return int(rows[0][0]) if rows else None
+
     def get_packages(self, scan_id: int) -> list[StoredPackage]:
         """A scan's packages, riskiest first, each with its dimension breakdown."""
         dims = self._dimensions_by_package(scan_id)

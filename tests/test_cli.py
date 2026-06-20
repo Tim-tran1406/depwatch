@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 
 from depwatch import service
 from depwatch.cli import app
-from depwatch.core.models import PackageSignals, ScanResult, ScoredPackage
+from depwatch.core.models import PackageChange, PackageSignals, ScanDiff, ScanResult, ScoredPackage
 from depwatch.scoring.score import score_package
 
 runner = CliRunner()
@@ -119,3 +119,31 @@ def test_scan_passes_no_save_through(monkeypatch: pytest.MonkeyPatch, requiremen
 def test_scan_rejects_a_missing_file() -> None:
     result = runner.invoke(app, ["scan", "does-not-exist.txt"])
     assert result.exit_code != 0
+
+
+def test_since_last_renders_the_diff(monkeypatch: pytest.MonkeyPatch, requirements: Path) -> None:
+    monkeypatch.setattr(service, "run_scan", lambda *a, **k: _result(str(requirements), 5))
+    diff = ScanDiff(
+        source=str(requirements),
+        previous_scan_id=4,
+        changes=[PackageChange(name="urllib3", status="worsened", detail="8 → 11 vulnerabilities")],
+    )
+    monkeypatch.setattr(service, "diff_against_previous", lambda *a, **k: diff)
+
+    result = runner.invoke(app, ["scan", str(requirements), "--since-last"])
+
+    assert result.exit_code == 0
+    assert "Changes since scan #4" in result.stdout
+    assert "urllib3" in result.stdout
+
+
+def test_since_last_with_no_previous_scan(
+    monkeypatch: pytest.MonkeyPatch, requirements: Path
+) -> None:
+    monkeypatch.setattr(service, "run_scan", lambda *a, **k: _result(str(requirements), 1))
+    monkeypatch.setattr(service, "diff_against_previous", lambda *a, **k: None)
+
+    result = runner.invoke(app, ["scan", str(requirements), "--since-last"])
+
+    assert result.exit_code == 0
+    assert "No previous scan" in result.stdout

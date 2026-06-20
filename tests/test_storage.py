@@ -141,6 +141,17 @@ def test_list_scans_is_newest_first() -> None:
         assert [s.source for s in scans] == ["new.txt", "old.txt"]
 
 
+def test_latest_scan_for_finds_the_newest_for_a_source() -> None:
+    with ScanStore() as store:
+        first = store.save_scan("req.txt", [HEALTHY], created_at=T0)
+        second = store.save_scan("req.txt", [HEALTHY], created_at=T1)
+        store.save_scan("other.txt", [HEALTHY], created_at=T1)
+
+        assert store.latest_scan_for("req.txt") == second
+        assert store.latest_scan_for("req.txt", before=second) == first
+        assert store.latest_scan_for("missing.txt") is None
+
+
 def test_dimension_averages_are_grouped_and_ordered() -> None:
     with ScanStore() as store:
         scan_id = store.save_scan("req.txt", [RISKY, HEALTHY], created_at=T0)

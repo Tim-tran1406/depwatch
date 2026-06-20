@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from depwatch.config import Settings
-from depwatch.core.models import ScanResult, ScoredPackage
+from depwatch.core.models import ScanDiff, ScanResult, ScoredPackage
 from depwatch.core.requirements import parse_requirements_file
 from depwatch.core.resolve import DependencyResolver
 from depwatch.ingest.depsdev import DepsDevClient
@@ -24,6 +24,7 @@ from depwatch.ingest.pypistats import PyPIStatsClient
 from depwatch.scoring.engine import ScoringEngine
 from depwatch.scoring.signals import SignalCollector
 from depwatch.storage.store import ScanStore
+from depwatch.trends import compute_diff
 
 
 async def _score(requirements: Path, settings: Settings) -> list[ScoredPackage]:
@@ -60,3 +61,16 @@ def run_scan(
     return ScanResult(
         source=str(requirements), created_at=moment, packages=packages, scan_id=scan_id
     )
+
+
+def diff_against_previous(result: ScanResult, settings: Settings) -> ScanDiff | None:
+    """Compare a result against the previous stored scan of the same source.
+
+    Returns None when there is no earlier scan to compare against.
+    """
+    with ScanStore(settings.db_path) as store:
+        previous_id = store.latest_scan_for(result.source, before=result.scan_id)
+        if previous_id is None:
+            return None
+        previous = store.get_packages(previous_id)
+    return compute_diff(result, previous, previous_id)

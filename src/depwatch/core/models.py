@@ -64,3 +64,19 @@ class ScanResult(BaseModel):
     created_at: datetime
     packages: list[ScoredPackage]
     scan_id: int | None = None  # set once the scan has been saved
+
+
+class PackageChange(BaseModel):
+    """How one package differs from the previous scan of the same project."""
+
+    name: str
+    status: str  # "added" | "removed" | "worsened" | "improved"
+    detail: str
+
+
+class ScanDiff(BaseModel):
+    """What changed between a scan and the previous one for the same source."""
+
+    source: str
+    previous_scan_id: int
+    changes: list[PackageChange]
