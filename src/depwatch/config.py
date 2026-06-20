@@ -13,12 +13,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CACHE_DIR = PROJECT_ROOT / "data" / "cache"
+DEFAULT_DB_PATH = PROJECT_ROOT / "data" / "depwatch.duckdb"
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="DEPWATCH_", env_file=".env", extra="ignore")
 
     cache_dir: Path = DEFAULT_CACHE_DIR
+    db_path: Path = DEFAULT_DB_PATH
     http_timeout: float = 30.0
     http_max_concurrency: int = 10
     user_agent: str = "depwatch/0.1 (+https://github.com/Tim-tran1406/depwatch)"
