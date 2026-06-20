@@ -12,6 +12,8 @@ from depwatch.ingest.osv import OSVClient
 from depwatch.ingest.pypi import PyPIClient
 from depwatch.ingest.pypistats import PyPIStatsClient
 
+_CVSS_VECTOR = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+
 
 def _run[T](settings: Settings, call: Callable[[AsyncFetcher], Awaitable[T]]) -> T:
     async def runner() -> T:
@@ -63,13 +65,25 @@ def test_depsdev_get_project_scorecard(httpx_mock: HTTPXMock, tmp_path: Path) ->
 
 def test_osv_query(httpx_mock: HTTPXMock, tmp_path: Path) -> None:
     httpx_mock.add_response(
-        json={"vulns": [{"id": "GHSA-x", "summary": "bad", "aliases": ["CVE-1"], "severity": []}]}
+        json={
+            "vulns": [
+                {
+                    "id": "GHSA-x",
+                    "summary": "bad",
+                    "aliases": ["CVE-1"],
+                    "severity": [{"type": "CVSS_V3", "score": _CVSS_VECTOR}],
+                    "database_specific": {"severity": "CRITICAL"},
+                }
+            ]
+        }
     )
     settings = Settings(cache_dir=tmp_path)
     vulns = _run(settings, lambda f: OSVClient(f, settings).query("requests", "2.31.0"))
     assert len(vulns) == 1
     assert vulns[0].id == "GHSA-x"
     assert vulns[0].aliases == ["CVE-1"]
+    assert vulns[0].severity_label == "CRITICAL"
+    assert vulns[0].cvss_vectors() == [_CVSS_VECTOR]
 
 
 def test_pypi_get_package_uses_latest_release(httpx_mock: HTTPXMock, tmp_path: Path) -> None:

@@ -30,11 +30,22 @@ def score_vulnerabilities(s: PackageSignals) -> DimensionScore:
     severity = s.highest_severity if s.highest_severity is not None else 5.0
     score = _clamp(severity / 10.0 + 0.1 * (s.vulnerability_count - 1))
     suffix = "y" if s.vulnerability_count == 1 else "ies"
+    named = _name_advisories(s.vulnerability_ids, s.vulnerability_count)
     return DimensionScore(
         name="vulnerabilities",
         score=score,
-        reason=f"{s.vulnerability_count} known vulnerabilit{suffix}, highest severity {severity:g}",
+        reason=f"{s.vulnerability_count} known vulnerabilit{suffix}{named}, "
+        f"highest severity {severity:g}",
     )
+
+
+def _name_advisories(ids: list[str], count: int) -> str:
+    """A short '(CVE-… +N more)' note for the reason, or empty when no ids are known."""
+    if not ids:
+        return ""
+    if count > 1:
+        return f" ({ids[0]} +{count - 1} more)"
+    return f" ({ids[0]})"
 
 
 def score_maintenance(s: PackageSignals) -> DimensionScore:

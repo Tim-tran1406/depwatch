@@ -14,7 +14,11 @@ class OSVVulnerability(BaseModel):
     id: str
     summary: str | None
     aliases: list[str]
-    severity: list[dict[str, Any]]
+    severity: list[dict[str, Any]]  # CVSS vectors: [{"type": "CVSS_V3", "score": "CVSS:3.1/..."}]
+    severity_label: str | None  # GitHub's qualitative rating, e.g. "HIGH"
+
+    def cvss_vectors(self) -> list[str]:
+        return [entry["score"] for entry in self.severity if "score" in entry]
 
 
 class OSVClient:
@@ -31,6 +35,7 @@ class OSVClient:
                 summary=vuln.get("summary"),
                 aliases=vuln.get("aliases", []),
                 severity=vuln.get("severity", []),
+                severity_label=vuln.get("database_specific", {}).get("severity"),
             )
             for vuln in data.get("vulns", [])
         ]

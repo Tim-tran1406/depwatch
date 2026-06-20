@@ -16,9 +16,10 @@ from datetime import UTC, datetime
 from depwatch.core.models import PackageSignals, ResolvedPackage
 from depwatch.ingest.depsdev import DepsDevClient, DepsDevVersion
 from depwatch.ingest.github import GitHubClient
-from depwatch.ingest.osv import OSVClient
+from depwatch.ingest.osv import OSVClient, OSVVulnerability
 from depwatch.ingest.pypi import PyPIClient
 from depwatch.ingest.pypistats import PyPIStatsClient
+from depwatch.scoring.severity import best_severity
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +49,14 @@ class SignalCollector:
             self._monthly_downloads(package.name),
         )
         contributors = await self._contributor_count(version.source_repo_url or pkg.source_url)
+        count, highest_severity, vulnerability_ids = _vulnerability_signals(vulns)
         return PackageSignals(
             name=package.name,
             version=package.version,
             is_direct=package.is_direct,
-            vulnerability_count=len(vulns),
+            vulnerability_count=count,
+            highest_severity=highest_severity,
+            vulnerability_ids=vulnerability_ids,
             days_since_last_release=_days_since(pkg.last_release_at),
             monthly_downloads=downloads,
             contributor_count=contributors,
@@ -75,6 +79,42 @@ class SignalCollector:
         except Exception as exc:
             logger.warning("no contributor data for %s: %s", source_url, exc)
             return None
+
+
+def _vulnerability_signals(vulns: list[OSVVulnerability]) -> tuple[int, float | None, list[str]]:
+    """Collapse duplicate advisories, then count, rank and pick the worst severity.
+
+    OSV often returns the same vulnerability from several databases (a GHSA and a
+    PYSEC entry for one CVE), so we key by the display id to avoid double counting.
+    """
+    severities: dict[str, float | None] = {}
+    for vuln in vulns:
+        key = _vuln_id(vuln)
+        severity = best_severity(vuln.cvss_vectors(), vuln.severity_label)
+        if key not in severities or _is_higher(severity, severities[key]):
+            severities[key] = severity
+    known = [severity for severity in severities.values() if severity is not None]
+    highest = max(known) if known else None
+    ordered = sorted(
+        severities.items(),
+        key=lambda item: item[1] if item[1] is not None else -1.0,
+        reverse=True,
+    )
+    return len(severities), highest, [key for key, _ in ordered]
+
+
+def _is_higher(candidate: float | None, current: float | None) -> bool:
+    if candidate is None:
+        return False
+    return current is None or candidate > current
+
+
+def _vuln_id(vuln: OSVVulnerability) -> str:
+    """Prefer the CVE alias for display; fall back to the OSV id (e.g. a GHSA)."""
+    for alias in vuln.aliases:
+        if alias.startswith("CVE-"):
+            return alias
+    return vuln.id
 
 
 def _github_owner_repo(source_url: str | None) -> tuple[str, str] | None:
